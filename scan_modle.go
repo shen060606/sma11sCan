@@ -57,9 +57,9 @@ func Top_port() map[int]string {
 	return ports
 }
 
-func Scan_full_port(ip string) []int {
+func Scan_full_port(ip string, grabbanner bool) []Portresult {
 	var jobs = make(chan int, 100)
-	var results = make(chan int, 100)
+	var results = make(chan Portresult, 100)
 	var wg sync.WaitGroup
 	// var ip string
 	// fmt.Println("请输入你要探测的ip：")
@@ -81,7 +81,7 @@ func Scan_full_port(ip string) []int {
 	workerCount := 100
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
-		go Worker(ip, jobs, results, &wg, &scanned)
+		go Worker(ip, jobs, results, &wg, &scanned, grabbanner)
 	}
 
 	//进度条
@@ -92,6 +92,7 @@ func Scan_full_port(ip string) []int {
 			bar := strings.Repeat("=", int(percent/2)) + ">"
 			fmt.Printf("\r[%-50s] %.1f%% (%d/65535)", bar, percent, n)
 			if n >= 65535 {
+				fmt.Println()
 				break
 			}
 			time.Sleep(100 * time.Millisecond)
@@ -103,7 +104,7 @@ func Scan_full_port(ip string) []int {
 		close(results)
 	}()
 
-	var openport []int
+	var openport []Portresult
 	for result := range results {
 		openport = append(openport, result)
 	}
@@ -112,9 +113,9 @@ func Scan_full_port(ip string) []int {
 
 }
 
-func Scan_top_ports(ip string) []int {
+func Scan_top_ports(ip string, grabbanner bool) []Portresult {
 	topPorts := Top_port()
-	var openports []int
+	var openports []Portresult
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
@@ -123,8 +124,16 @@ func Scan_top_ports(ip string) []int {
 		go func(p int) {
 			defer wg.Done()
 			if IsportAlive(ip, p) {
+				var banner string
+				if grabbanner {
+					if p == 80 || p == 443 || p == 8080 || p == 3128 || p == 8081 || p == 9098 {
+						banner = Httpbannerget(ip, p)
+					} else {
+						banner = Bannerget(ip, p)
+					}
+				}
 				mu.Lock()
-				openports = append(openports, p)
+				openports = append(openports, Portresult{Port: p, Banner: banner, Server: BannerIdentify(p, banner)})
 				mu.Unlock()
 			}
 		}(port)
@@ -132,5 +141,4 @@ func Scan_top_ports(ip string) []int {
 	wg.Wait()
 
 	return openports
-
 }

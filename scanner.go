@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+type Portresult struct {
+	Port   int
+	Banner string
+	Server string
+}
+
 func IsportAlive(ip string, port int) bool {
 	ip_port := fmt.Sprintf("%s:%d", ip, port)
 	conn, err := net.DialTimeout("tcp", ip_port, 200*time.Millisecond)
@@ -22,11 +28,21 @@ func IsportAlive(ip string, port int) bool {
 	return true
 }
 
-func Worker(ip string, jobs <-chan int, results chan<- int, wg *sync.WaitGroup, scanned *int32) {
+func Worker(ip string, jobs <-chan int, results chan<- Portresult, wg *sync.WaitGroup, scanned *int32, grabbanner bool) {
 	defer wg.Done()
 	for port := range jobs {
 		if IsportAlive(ip, port) {
-			results <- port
+			var banner string
+			var server string
+			if grabbanner {
+				if port == 80 || port == 443 || port == 8080 || port == 3128 || port == 8081 || port == 9098 {
+					banner = Httpbannerget(ip, port)
+				} else {
+					banner = Bannerget(ip, port)
+				}
+				server = BannerIdentify(port, banner)
+			}
+			results <- Portresult{Port: port, Banner: banner, Server: server}
 		}
 		atomic.AddInt32(scanned, 1)
 	}
@@ -56,13 +72,19 @@ func Cidrgetter(cidr string) []string {
 	return hosts
 }
 
-func PrintResult(ip string, ports []int) {
-	if len(ports) == 0 {
+func PrintResult(ip string, results []Portresult) {
+	if len(results) == 0 {
 		fmt.Println("没有存活的端口")
 	} else {
 		fmt.Println("存活的端口：")
-		for _, p := range ports {
-			fmt.Printf("%s:%d\n", ip, p)
+		for _, p := range results {
+			if p.Banner != "" {
+				fmt.Printf("%s:%d  %s %s\n", ip, p.Port, p.Server, p.Banner)
+			} else if p.Server != "" {
+				fmt.Printf("%s:%d  %s\n", ip, p.Port, p.Server)
+			} else {
+				fmt.Printf("%s:%d\n", ip, p.Port)
+			}
 		}
 	}
 }
