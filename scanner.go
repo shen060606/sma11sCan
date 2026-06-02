@@ -35,7 +35,7 @@ func Worker(ip string, jobs <-chan int, results chan<- Portresult, wg *sync.Wait
 			var banner string
 			var server string
 			if grabbanner {
-				if port == 80 || port == 443 || port == 8080 || port == 3128 || port == 8081 || port == 9098 {
+				if port == 80 || port == 443 || port == 8080 || port == 3128 || port == 8081 || port == 9090 {
 					banner = Httpbannerget(ip, port)
 				} else {
 					banner = Bannerget(ip, port)
@@ -87,4 +87,17 @@ func PrintResult(ip string, results []Portresult) {
 			}
 		}
 	}
+}
+
+// 解析域名
+func ResolveHost(ip string) string {
+	if net.ParseIP(ip) != nil {
+		return ip
+	}
+
+	addrip, err := net.LookupHost(ip) //返回的是字符串数组[0]是ipv4地址,[1]是ipv6地址
+	if err != nil {
+		return ""
+	}
+	return addrip[0]
 }

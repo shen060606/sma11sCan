@@ -11,13 +11,61 @@ func main() {
 	var module string
 	var ip string
 	var grabbanner bool
+	var domain string
+	var noscan bool
+	var wordlist string
+
 	// fmt.Println("请输入你要探测的ip：")
 	//fmt.Scan(&ip)
-	flag.StringVar(&ip, "ip", "", "目标ip/CIDR网段")
-	flag.StringVar(&module, "module", "top", "扫描模式 (top 或 full)")
+	flag.StringVar(&ip, "ip", "", "目标域名/ip/CIDR网段")
+	flag.StringVar(&module, "module", "fast", "扫描模式 (fast 或 top 或 full)")
 	flag.BoolVar(&grabbanner, "banner", false, "抓取banner服务")
+	flag.StringVar(&domain, "domain", "", "目标域名(收集子域名)")
+	flag.BoolVar(&noscan, "noscan", false, "只收集子域名，不进行端口扫描")
+	flag.StringVar(&wordlist, "wordlist", "subdomains.txt", "子域名收集时的字典文件")
 
 	flag.Parse()
+
+	//子域名模式
+	if domain != "" {
+		//subdomains := GetSubdomains(domain)
+		words := ReadWordlist(wordlist)
+		if len(words) == 0 {
+			fmt.Println("字典文件不存在")
+			return
+		}
+		subdomains := GetdomainsForce(domain, words)
+		if len(subdomains) == 0 {
+			fmt.Println("没有子域名")
+			return
+		}
+
+		fmt.Printf("收集到%d个子域名：\n", len(subdomains))
+
+		for _, sub := range subdomains {
+			fmt.Println(" ", sub)
+		}
+
+		if noscan {
+			return
+		}
+
+		//带其他参数时
+		ipset := make(map[string]bool)
+		for _, sub := range subdomains {
+			if ip := ResolveHost(sub); ip != "" {
+				ipset[ip] = true
+			}
+
+		}
+
+		fmt.Printf("\n解析到%d个IP地址，开始扫描...\n", len(ipset))
+
+		for ipstr := range ipset {
+			PrintResult(ipstr, Scan_fast_ports(ipstr, grabbanner))
+		}
+		return
+	}
 
 	if strings.Contains(ip, "/") {
 
@@ -39,7 +87,7 @@ func main() {
 			wg.Add(1)
 			go func(h string) {
 				defer wg.Done()
-				ports := Scan_top_ports(h, grabbanner)
+				ports := Scan_fast_ports(h, grabbanner)
 				mu.Lock()
 				results = append(results, result{h, ports})
 				mu.Unlock()
@@ -55,7 +103,9 @@ func main() {
 			for _, r := range results {
 				for _, p := range r.ports {
 					if p.Banner != "" {
-						fmt.Printf("%s:%d  %s\n", r.ip, p.Port, p.Banner)
+						fmt.Printf("%s:%d  %s %s\n", r.ip, p.Port, p.Server, p.Banner)
+					} else if p.Server != "" {
+						fmt.Printf("%s:%d  %s\n", r.ip, p.Port, p.Server)
 					} else {
 						fmt.Printf("%s:%d\n", r.ip, p.Port)
 					}
@@ -68,14 +118,22 @@ func main() {
 		// fmt.Println("2. 全端口扫描")
 
 		// fmt.Println("请输入选择的数字:")
+		ip = ResolveHost(ip)
+		if ip == "" {
+			fmt.Println("无法解析目标域名!!!")
+			return
+		}
 
 		var Alive_ports []Portresult
 		switch module {
-		case "top":
-			Alive_ports = Scan_top_ports(ip, grabbanner)
+		case "fast":
+			Alive_ports = Scan_fast_ports(ip, grabbanner)
 
 		case "full":
 			Alive_ports = Scan_full_port(ip, grabbanner)
+
+		case "top":
+			Alive_ports = Scan_top_ports(ip, grabbanner)
 
 		default:
 			fmt.Println("无效的扫描模式")
