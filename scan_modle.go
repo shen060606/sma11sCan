@@ -132,15 +132,27 @@ func Scan_fast_ports(ip string, grabbanner bool) []Portresult {
 			defer wg.Done()
 			if IsportAlive(ip, p) {
 				var banner string
+				var info *HttpInfo
+				var err error
 				if grabbanner {
 					if p == 80 || p == 443 || p == 8080 || p == 3128 || p == 8081 || p == 9090 {
-						banner = Httpbannerget(ip, p)
+						info, err = Httpbannerget(ip, p)
+						if err != nil {
+							fmt.Println(err)
+							banner = ""
+						} else {
+							banner = info.Display()
+						}
 					} else {
 						banner = Bannerget(ip, p)
 					}
 				}
 				mu.Lock()
-				openports = append(openports, Portresult{Port: p, Banner: banner, Server: BannerIdentify(p, banner)})
+				var fps string
+				if info != nil {
+					fps = info.Fingerprints
+				}
+				openports = append(openports, Portresult{Port: p, Banner: banner, Server: BannerIdentify(p, banner), Fingerprints: fps})
 				mu.Unlock()
 			}
 		}(port)
@@ -162,15 +174,27 @@ func Scan_top_ports(ip string, grabbanner bool) []Portresult {
 			defer wg.Done()
 			if IsportAlive(ip, p) {
 				var banner string
+				var info *HttpInfo
+				var err error
 				if grabbanner {
-					if p == 80 || p == 443 || p == 8080 || p == 3128 || p == 8081 || p == 9098 {
-						banner = Httpbannerget(ip, p)
+					if p == 80 || p == 443 || p == 8080 || p == 3128 || p == 8081 || p == 9090 {
+						info, err = Httpbannerget(ip, p)
+						if err != nil {
+							fmt.Println(err)
+							banner = ""
+						} else {
+							banner = info.Display()
+						}
 					} else {
 						banner = Bannerget(ip, p)
 					}
 				}
 				mu.Lock()
-				openports = append(openports, Portresult{Port: p, Banner: banner, Server: BannerIdentify(p, banner)})
+				var fps string
+				if info != nil {
+					fps = info.Fingerprints
+				}
+				openports = append(openports, Portresult{Port: p, Banner: banner, Server: BannerIdentify(p, banner), Fingerprints: fps})
 				mu.Unlock()
 			}
 

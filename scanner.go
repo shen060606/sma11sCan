@@ -10,9 +10,10 @@ import (
 )
 
 type Portresult struct {
-	Port   int
-	Banner string
-	Server string
+	Port         int
+	Banner       string
+	Server       string
+	Fingerprints string
 }
 
 func IsportAlive(ip string, port int) bool {
@@ -34,15 +35,28 @@ func Worker(ip string, jobs <-chan int, results chan<- Portresult, wg *sync.Wait
 		if IsportAlive(ip, port) {
 			var banner string
 			var server string
+			var info *HttpInfo
+			var err error
 			if grabbanner {
 				if port == 80 || port == 443 || port == 8080 || port == 3128 || port == 8081 || port == 9090 {
-					banner = Httpbannerget(ip, port)
+					info, err = Httpbannerget(ip, port)
+					if err != nil {
+						fmt.Println(err)
+						banner = ""
+					} else {
+						banner = info.Display()
+					}
+
 				} else {
 					banner = Bannerget(ip, port)
 				}
 				server = BannerIdentify(port, banner)
 			}
-			results <- Portresult{Port: port, Banner: banner, Server: server}
+			if info != nil {
+				results <- Portresult{Port: port, Banner: banner, Server: server, Fingerprints: info.Fingerprints}
+			} else {
+				results <- Portresult{Port: port, Banner: banner, Server: server}
+			}
 		}
 		atomic.AddInt32(scanned, 1)
 	}
@@ -75,17 +89,24 @@ func Cidrgetter(cidr string) []string {
 func PrintResult(ip string, results []Portresult) {
 	if len(results) == 0 {
 		fmt.Println("没有存活的端口")
-	} else {
-		fmt.Println("存活的端口：")
-		for _, p := range results {
-			if p.Banner != "" {
-				fmt.Printf("%s:%d  %s %s\n", ip, p.Port, p.Server, p.Banner)
-			} else if p.Server != "" {
-				fmt.Printf("%s:%d  %s\n", ip, p.Port, p.Server)
-			} else {
-				fmt.Printf("%s:%d\n", ip, p.Port)
-			}
+		return
+	}
+
+	fmt.Println("存活的端口：")
+	for _, p := range results {
+		// 拼输出行
+		line := fmt.Sprintf("%s:%-6d", ip, p.Port)
+
+		if p.Server != "" {
+			line += fmt.Sprintf(" [%-8s]", p.Server)
 		}
+		if p.Fingerprints != "" {
+			line += fmt.Sprintf(" <%s>", p.Fingerprints)
+		}
+		if p.Banner != "" {
+			line += " " + p.Banner
+		}
+		fmt.Println(line)
 	}
 }
 
