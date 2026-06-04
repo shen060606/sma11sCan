@@ -29,7 +29,7 @@ func IsportAlive(ip string, port int) bool {
 	return true
 }
 
-func Worker(ip string, jobs <-chan int, results chan<- Portresult, wg *sync.WaitGroup, scanned *int32, grabbanner bool) {
+func Worker(ip string, host string, jobs <-chan int, results chan<- Portresult, wg *sync.WaitGroup, scanned *int32, grabbanner bool) {
 	defer wg.Done()
 	for port := range jobs {
 		if IsportAlive(ip, port) {
@@ -39,7 +39,7 @@ func Worker(ip string, jobs <-chan int, results chan<- Portresult, wg *sync.Wait
 			var err error
 			if grabbanner {
 				if port == 80 || port == 443 || port == 8080 || port == 3128 || port == 8081 || port == 9090 {
-					info, err = Httpbannerget(ip, port)
+					info, err = Httpbannerget(ip, port, host)
 					if err != nil {
 						fmt.Println(err)
 						banner = ""

@@ -64,7 +64,7 @@ func Top_port() map[int]string {
 	return ports
 }
 
-func Scan_full_port(ip string, grabbanner bool) []Portresult {
+func Scan_full_port(ip string, host string, grabbanner bool) []Portresult {
 	var jobs = make(chan int, 100)
 	var results = make(chan Portresult, 100)
 	var wg sync.WaitGroup
@@ -88,7 +88,7 @@ func Scan_full_port(ip string, grabbanner bool) []Portresult {
 	workerCount := 100
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
-		go Worker(ip, jobs, results, &wg, &scanned, grabbanner)
+		go Worker(ip, host, jobs, results, &wg, &scanned, grabbanner)
 	}
 
 	//进度条
@@ -120,7 +120,7 @@ func Scan_full_port(ip string, grabbanner bool) []Portresult {
 
 }
 
-func Scan_fast_ports(ip string, grabbanner bool) []Portresult {
+func Scan_fast_ports(ip string, host string, grabbanner bool) []Portresult {
 	topPorts := Top_port()
 	var openports []Portresult
 	var mu sync.Mutex
@@ -136,7 +136,7 @@ func Scan_fast_ports(ip string, grabbanner bool) []Portresult {
 				var err error
 				if grabbanner {
 					if p == 80 || p == 443 || p == 8080 || p == 3128 || p == 8081 || p == 9090 {
-						info, err = Httpbannerget(ip, p)
+						info, err = Httpbannerget(ip, p, host)
 						if err != nil {
 							fmt.Println(err)
 							banner = ""
@@ -162,7 +162,7 @@ func Scan_fast_ports(ip string, grabbanner bool) []Portresult {
 	return openports
 }
 
-func Scan_top_ports(ip string, grabbanner bool) []Portresult {
+func Scan_top_ports(ip string, host string, grabbanner bool) []Portresult {
 	top100ports := Top1000ports()
 	var openports []Portresult
 	var mu sync.Mutex
@@ -178,7 +178,7 @@ func Scan_top_ports(ip string, grabbanner bool) []Portresult {
 				var err error
 				if grabbanner {
 					if p == 80 || p == 443 || p == 8080 || p == 3128 || p == 8081 || p == 9090 {
-						info, err = Httpbannerget(ip, p)
+						info, err = Httpbannerget(ip, p, host)
 						if err != nil {
 							fmt.Println(err)
 							banner = ""

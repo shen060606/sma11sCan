@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -46,27 +47,47 @@ type HttpInfo struct {
 }
 
 // 80,443,8080端口http请求
-func Httpbannerget(ip string, port int) (*HttpInfo, error) {
-	var headers strings.Builder //创建一个可拼接的字符串
+// ip: TCP 连接目标 IP；host: SNI + Host 头使用的域名（没域名时等于 ip）
+func Httpbannerget(ip string, port int, host string) (*HttpInfo, error) {
+	var headers strings.Builder
 
-	var ipaddr string
+	scheme := "https"
 	if port == 80 || port == 8080 {
-		ipaddr = fmt.Sprintf("http://%s:%d", ip, port)
-	} else {
-		ipaddr = fmt.Sprintf("https://%s:%d", ip, port)
+		scheme = "http"
 	}
 
-	//跳过整数验证
-	client := &http.Client{ //创建一个结构体,下面都是配置
+	dialer := &net.Dialer{Timeout: 2 * time.Second}
+
+	// 自定义 Transport：TCP 连 ip，SNI 用 host
+	client := &http.Client{
 		Timeout: 2 * time.Second,
 		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%d", ip, port))
+			},
 			TLSClientConfig: &tls.Config{
+				ServerName:         host,
 				InsecureSkipVerify: true,
 			},
 		},
 	}
 
-	conn, err := client.Get(ipaddr)
+	reqURL := fmt.Sprintf("%s://%s", scheme, host)
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// 模拟浏览器请求头，绕过简单反爬
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36")
+	req.Header.Set("Accept",
+		"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
+	req.Header.Set("Connection", "close")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+
+	conn, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -109,14 +130,20 @@ func Httpbannerget(ip string, port int) (*HttpInfo, error) {
 		Cookies: cookies.String(),
 	}
 
-	fps := Matchfinger(httpresult1)
+	favHashes := GetFavicon(ip, string(body))
+
+	fps1 := Matchfinger(httpresult1)
+	fps2 := MatchFavicon(favHashes)
+
+	allfps := append(fps1, fps2...)
+
 	return &HttpInfo{
 		Status:       conn.Status,
 		Title:        title,
 		Headers:      headers.String(),
 		Body:         string(body),
 		Server:       conn.Header.Get("Server"),
-		Fingerprints: strings.Join(fps, ","),
+		Fingerprints: strings.Join(allfps, ","),
 	}, nil
 
 }

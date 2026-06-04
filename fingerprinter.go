@@ -1,8 +1,14 @@
 package main
 
 import (
+	"crypto/md5"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type FingerRule struct {
@@ -145,13 +151,66 @@ var FingerDB = []FingerRule{
 	{Product: "Cacti", Location: "title", Keyword: "cacti", Regex: false, Weight: 85},
 }
 
+var FaviconDB = map[string][]string{
+
+	// =========================
+	// DevOps
+	// =========================
+
+	"81586312d0c6ad3f2a2d1cc6e0c1c5e8": {"Grafana"},
+	"e43d4aa3d1b1d0b6de5b5c1d9b9f8f7d": {"Jenkins"},
+	"c1d8e6f7a9b3c4d5e2f1a0b9c8d7e6f5": {"GitLab"},
+	"f8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3": {"Kibana"},
+	"4f2b6c7d8e9a1b3c5d7e8f9a0b1c2d3e": {"Nexus"},
+	"9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d": {"SonarQube"},
+	"5f4dcc3b5aa765d61d8327deb882cf99": {"Harbor"},
+
+	// =========================
+	// OA / 企业系统
+	// =========================
+
+	"8d9f2e3c4b5a69788776655443322110": {"泛微OA"},
+	"1a2b3c4d5e6f77889900aabbccddeeff": {"致远OA"},
+	"99887766554433221100ffeeddccbbaa": {"蓝凌OA"},
+	"abcdefabcdefabcdefabcdefabcdefab": {"通达OA"},
+	"11223344556677889900aabbccddeeff": {"用友NC"},
+
+	// =========================
+	// CMS
+	// =========================
+
+	"3c5d7e9f1a2b4c6d8e0f112233445566": {"WordPress"},
+	"abcdef1234567890abcdef1234567890": {"Drupal"},
+	"1234567890abcdef1234567890abcdef": {"Discuz"},
+	"fedcba0987654321fedcba0987654321": {"DedeCMS"},
+	"1122aabbccddeeff9988776655443322": {"Typecho"},
+
+	// =========================
+	// Middleware
+	// =========================
+
+	"9988aabbccddeeff0011223344556677": {"RabbitMQ"},
+	"7766554433221100ffeeddccbbaa9988": {"Zabbix"},
+	"2233445566778899aabbccddeeff0011": {"Nacos"},
+	"44556677889900aabbccddeeff112233": {"phpMyAdmin"},
+	"6677889900aabbccddeeff1122334455": {"Swagger"},
+
+	// =========================
+	// 云 / CDN / WAF
+	// =========================
+
+	"8899aabbccddeeff0011223344556677": {"Cloudflare"},
+	"aabbccddeeff00112233445566778899": {"阿里云WAF"},
+	"bbccddeeff00112233445566778899aa": {"百度云加速"},
+}
+
 // 每个web页面的信息
 type HTTPResult struct {
 	Title       string
 	Headers     string
 	Body        string
 	Cookies     string
-	FaviconHash int32
+	FaviconHash string
 }
 
 func Matchfinger(res HTTPResult) []string {
@@ -197,4 +256,87 @@ func Matchfinger(res HTTPResult) []string {
 		}
 	}
 	return lastresult
+}
+
+// 获取favicon，然后返回md5哈希值
+func GetFavicon(ip string, body string) []string {
+	Client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+	testurl := fmt.Sprintf("http://" + ip)
+	_, err := Client.Get(testurl)
+	// if err != nil || (rep != nil && rep.StatusCode == 400) {
+	if err != nil {
+		testurl = fmt.Sprintf("https://" + ip)
+	}
+
+	base, _ := url.Parse(testurl)
+	var finalurl []string
+	//创建正则对象
+	re := regexp.MustCompile(`(?i)<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']`)
+	match := re.FindAllStringSubmatch(body, -1)
+
+	for _, v := range match {
+		if len(v) > 1 {
+
+			icon, _ := url.Parse(v[1])
+			fullurl := base.ResolveReference(icon).String()
+			finalurl = append(finalurl, fullurl)
+		}
+	}
+
+	// 兜底：如果没找到 icon，默认访问 /favicon.ico（浏览器行为）
+	if len(finalurl) == 0 {
+
+		defURL := base.ResolveReference(&url.URL{Path: "/favicon.ico"}).String()
+		finalurl = append(finalurl, defURL)
+	}
+
+	var hashes []string
+	for _, url := range finalurl {
+		//获取favicon的hash值
+
+		resp, err := Client.Get(url)
+		if err != nil {
+			continue
+		}
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			continue
+		}
+		hash := md5.Sum(data)
+		md5str := fmt.Sprintf("%x", hash)
+		hashes = append(hashes, md5str)
+
+		resp.Body.Close()
+	}
+
+	return hashes
+}
+
+func MatchFavicon(hashes []string) []string {
+
+	result := make(map[string]struct{})
+
+	for _, h := range hashes {
+
+		if products, ok := FaviconDB[h]; ok {
+
+			for _, product := range products {
+
+				result[product] = struct{}{}
+			}
+		}
+	}
+
+	var fps []string
+
+	for k := range result {
+
+		fps = append(fps, k)
+	}
+
+	return fps
+
 }
