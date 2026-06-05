@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/md5"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -154,54 +155,88 @@ var FingerDB = []FingerRule{
 var FaviconDB = map[string][]string{
 
 	// =========================
-	// DevOps
+	// DevOps / 运维平台
 	// =========================
 
-	"81586312d0c6ad3f2a2d1cc6e0c1c5e8": {"Grafana"},
-	"e43d4aa3d1b1d0b6de5b5c1d9b9f8f7d": {"Jenkins"},
-	"c1d8e6f7a9b3c4d5e2f1a0b9c8d7e6f5": {"GitLab"},
-	"f8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3": {"Kibana"},
-	"4f2b6c7d8e9a1b3c5d7e8f9a0b1c2d3e": {"Nexus"},
-	"9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d": {"SonarQube"},
-	"5f4dcc3b5aa765d61d8327deb882cf99": {"Harbor"},
+	"23e8c7bd78e8cd826c5a6073b15068b1": {"Jenkins"},
+	"1c4201c7da53d6c7e48251d3a9680449": {"Nagios"},
+	"e298e00b2ff6340343ddf2fc6212010b": {"Nessus"},
+	"d80e364c0d3138c7ecd75bf9896f2cad": {"Tomcat"},
+	"799f70b71314a7508326d1d2f68f7519": {"JBoss"},
+	"04d89d5b7a290334f5ce37c7e8b6a349": {"Jira"},
+	"12888a39a499eb041ca42bf456aca285": {"Confluence"},
+	"c9339a2ecde0980f40ba22c2d237b94b": {"GLPI"},
+	"dcea02a5797ce9e36f19b7590752563e": {"Plesk"},
+	"64ca706a50715e421b6c2fa0b32ed7ec": {"Plesk Panel"},
 
 	// =========================
 	// OA / 企业系统
 	// =========================
 
-	"8d9f2e3c4b5a69788776655443322110": {"泛微OA"},
-	"1a2b3c4d5e6f77889900aabbccddeeff": {"致远OA"},
-	"99887766554433221100ffeeddccbbaa": {"蓝凌OA"},
-	"abcdefabcdefabcdefabcdefabcdefab": {"通达OA"},
-	"11223344556677889900aabbccddeeff": {"用友NC"},
+	"7dbe9acc2ab6e64d59fa67637b1239df": {"Lotus Domino"},
+	"639b61409215d770a99667b446c80ea1": {"Lotus-Domino"},
+	"49bf194d1eccb1e5110957d14559d33d": {"OTRS"},
+	"f567fd4927f9693a7a2d6cacf21b51b6": {"Horde WebMail"},
+	"919e132a62ea07fce13881470ba70293": {"Horde Groupware"},
+	"d90cc1762bf724db71d6df86effab63c": {"Vtiger CRM"},
+	"b14353fafda7c90fb1a2a214c195de50": {"webERP"},
+	"f097f0adf2b9e95a972d21e5e5ab746d": {"Citrix Access"},
 
 	// =========================
-	// CMS
+	// CMS / 建站系统
 	// =========================
 
-	"3c5d7e9f1a2b4c6d8e0f112233445566": {"WordPress"},
-	"abcdef1234567890abcdef1234567890": {"Drupal"},
-	"1234567890abcdef1234567890abcdef": {"Discuz"},
-	"fedcba0987654321fedcba0987654321": {"DedeCMS"},
-	"1122aabbccddeeff9988776655443322": {"Typecho"},
+	"fa54dbf2f61bd2e0188e47f5f578f736": {"WordPress"},
+	"b231ad66a2a9b0eb06f72c4c88973039": {"WordPress"},
+	"e44d22b74f7ee4435e22062d5adf4a6a": {"WordPress 2.x"},
+	"e6a9dc66179d8c9f34288b16a02f987e": {"Drupal"},
+	"b6341dfc213100c61db4fb8775878cec": {"Drupal 7"},
+	"c1201c47c81081c7f0930503cae7f71a": {"vBulletin"},
+	"8757fcbdbd83b0808955f6735078a287": {"Discuz"},
+	"9fac8b45400f794e0799d0d5458c092b": {"Discuz!"},
+	"63b982eddd64d44233baa25066db6bc1": {"Joomla"},
+	"428b23df874b41d904bbae29057bdba5": {"ECShop"},
+	"4cfbb29d0d83685ba99323bc0d4d3513": {"PHPWind"},
+	"4eb846f1286ab4e7a399c851d7d84cca": {"Plone CMS"},
+	"de68f0ad7b37001b8241bce3887593c7": {"b2evolution"},
+	"5b0e3b33aa166c88cee57f83de1d4e55": {"DotNetNuke"},
+	"933a83c6e9e47bd1e38424f3789d121d": {"Moodle"},
 
 	// =========================
-	// Middleware
+	// Middleware / 中间件 / 数据库
 	// =========================
 
-	"9988aabbccddeeff0011223344556677": {"RabbitMQ"},
-	"7766554433221100ffeeddccbbaa9988": {"Zabbix"},
-	"2233445566778899aabbccddeeff0011": {"Nacos"},
-	"44556677889900aabbccddeeff112233": {"phpMyAdmin"},
-	"6677889900aabbccddeeff1122334455": {"Swagger"},
+	"d037ef2f629a22ddadcf438e6be7a325": {"phpMyAdmin"},
+	"531b63a51234bb06c9d77f219eb25553": {"phpMyAdmin 4.6+"},
+	"a967c8bfde9ea0869637294b679b7251": {"Squid Proxy"},
+	"4644f2d45601037b8423d45e13194c93": {"Apache Tomcat"},
+	"71e30c507ca3fa005e2d1322a5aa8fb2": {"Apache on Redhat"},
+	"eb6d4ce00ec36af7d439ebd4e5a395d7": {"Mailman"},
+	"e9469705a8ac323e403d74c11425a62b": {"RoundCube"},
+	"ef9c0362bf20a086bb7c2e8ea346b9f0": {"RoundCube 1.0+"},
+	"f1ac749564d5ba793550ec6bdc472e7c": {"RoundCube Elastic"},
+	"ebe293e1746858d2548bca99c43e4969": {"MantisBT"},
+	"701bb703b31f99da18251ca2e557edf0": {"MantisBT 1.2.x"},
+	"c126f7e761813946fea2e90ff7ddb838": {"Zenoss"},
+	"a4eb4e0aa80740db8d7d951b6d63b2a2": {"ownCloud"},
 
 	// =========================
-	// 云 / CDN / WAF
+	// 硬件 / 路由 / NAS / 防火墙
 	// =========================
 
-	"8899aabbccddeeff0011223344556677": {"Cloudflare"},
-	"aabbccddeeff00112233445566778899": {"阿里云WAF"},
-	"bbccddeeff00112233445566778899aa": {"百度云加速"},
+	"531e652a15bc0ad59b6af05019b1834a": {"Synology DSM"},
+	"7ff45523a7ee9686d3d391a0a27a0b4f": {"QNAP TurboNAS"},
+	"9c003f40e63df95a2b844c6b61448310": {"DD-WRT"},
+	"6dcab71e60f0242907940f0fcda69ea5": {"Ubiquiti AirOS"},
+	"befcded36aec1e59ea624582fcb3225c": {"SpeedTouch Router"},
+	"a8fe5b8ae2c445a33ac41b33ccc9a120": {"Arris Router"},
+	"dc0816f371699823e1e03e0078622d75": {"Aruba Network"},
+	"f1876a80546b3986dbb79bad727b0374": {"NetScreen Firewall"},
+	"240c36cd118aa1ff59986066f21015d4": {"LANCOM Router"},
+	"7b0d4bc0ca1659d54469e5013a08d240": {"Netgear ReadyNAS"},
+	"d16a0da12074dae41980a6918d33f031": {"ST 605 Router"},
+	"ee4a637a1257b2430649d6750cda6eba": {"Trimble Device"},
+	"de2b6edbf7930f5dd0ffe0528b2bbcf4": {"Barracuda Firewall"},
 }
 
 // 每个web页面的信息
@@ -262,15 +297,14 @@ func Matchfinger(res HTTPResult) []string {
 func GetFavicon(ip string, body string) []string {
 	Client := &http.Client{
 		Timeout: 3 * time.Second,
-	}
-	testurl := fmt.Sprintf("http://" + ip)
-	_, err := Client.Get(testurl)
-	// if err != nil || (rep != nil && rep.StatusCode == 400) {
-	if err != nil {
-		testurl = fmt.Sprintf("https://" + ip)
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
 	}
 
-	base, _ := url.Parse(testurl)
+	base, _ := url.Parse(ip)
 	var finalurl []string
 	//创建正则对象
 	re := regexp.MustCompile(`(?i)<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']`)

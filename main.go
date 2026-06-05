@@ -97,22 +97,17 @@ func main() {
 		}
 		wg.Wait()
 
-		if len(results) == 0 {
-			fmt.Println("没有存活的端口")
-		} else {
-			fmt.Println("存活的端口如下：")
-			for _, r := range results {
-				for _, p := range r.ports {
-					if p.Banner != "" {
-						fmt.Printf("%s:%d  %s %s\n", r.ip, p.Port, p.Server, p.Banner)
-					} else if p.Server != "" {
-						fmt.Printf("%s:%d  %s\n", r.ip, p.Port, p.Server)
-					} else {
-						fmt.Printf("%s:%d\n", r.ip, p.Port)
-					}
-				}
+		var aliveCount int
+		for _, r := range results {
+			if len(r.ports) > 0 {
+				PrintResult(r.ip, r.ports)
+				aliveCount++
 			}
 		}
+		if aliveCount == 0 {
+			fmt.Println("没有存活的端口")
+		}
+
 	} else {
 		// fmt.Println("请选择扫描模式：")
 		// fmt.Println("1. top端口扫描")

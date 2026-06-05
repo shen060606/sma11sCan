@@ -47,14 +47,19 @@ type HttpInfo struct {
 }
 
 // 80,443,8080端口http请求
-// ip: TCP 连接目标 IP；host: SNI + Host 头使用的域名（没域名时等于 ip）
 func Httpbannerget(ip string, port int, host string) (*HttpInfo, error) {
-	var headers strings.Builder
 
-	scheme := "https"
-	if port == 80 || port == 8080 {
-		scheme = "http"
+	info, err := Dorequest("https", ip, port, host)
+	if err == nil {
+		return info, nil
 	}
+
+	return Dorequest("http", ip, port, host)
+}
+
+// ip: TCP 连接目标 IP；host: SNI + Host 头使用的域名（没域名时等于 ip）
+func Dorequest(scheme string, ip string, port int, host string) (*HttpInfo, error) {
+	var headers strings.Builder
 
 	dialer := &net.Dialer{Timeout: 2 * time.Second}
 
@@ -130,7 +135,7 @@ func Httpbannerget(ip string, port int, host string) (*HttpInfo, error) {
 		Cookies: cookies.String(),
 	}
 
-	favHashes := GetFavicon(ip, string(body))
+	favHashes := GetFavicon(reqURL, string(body))
 
 	fps1 := Matchfinger(httpresult1)
 	fps2 := MatchFavicon(favHashes)
@@ -150,14 +155,25 @@ func Httpbannerget(ip string, port int, host string) (*HttpInfo, error) {
 
 // 将info存在的部分转化为字符串，然后赋值给banner
 func (h *HttpInfo) Display() string {
-	s := h.Status
+	var parts []string
+
+	if h.Status != "" {
+		parts = append(parts, h.Status)
+	}
+
 	if h.Server != "" {
-		s += " | Server: " + h.Server
+		parts = append(parts, "Server: "+h.Server)
 	}
+
 	if h.Title != "" {
-		s += " | Title: " + h.Title
+		parts = append(parts, "Title: "+h.Title)
 	}
-	return s
+
+	if h.Fingerprints != "" {
+		parts = append(parts, "FP: "+h.Fingerprints)
+	}
+
+	return strings.Join(parts, " | ")
 }
 
 func BannerIdentify(port int, banner string) string {
