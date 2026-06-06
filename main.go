@@ -109,16 +109,40 @@ func main() {
 		}
 
 	} else {
-		// fmt.Println("请选择扫描模式：")
-		// fmt.Println("1. top端口扫描")
-		// fmt.Println("2. 全端口扫描")
-
-		// fmt.Println("请输入选择的数字:")
 		host := ip // 保存原始输入（域名或IP）
 		ip = ResolveHost(ip)
 		if ip == "" {
 			fmt.Println("无法解析目标域名!!!")
 			return
+		}
+
+		// 进行 CDN 检测，尝试找到源站 IP
+		cdninfo := DetectCdnByCNAME(host)
+
+		if cdninfo.Iscdn {
+			fmt.Println("[CDN] true")
+			fmt.Println("[CDN Provider]", strings.Join(cdninfo.Providers, ","))
+
+			candidates := FindallHostip(host)
+			if len(candidates) > 0 {
+				fmt.Printf("[VirusTotal] 获取到 %d 个候选 IP\n", len(candidates))
+				for _, c := range candidates {
+					fmt.Printf("    %-15s  source=%s  date=%d\n", c.Ip, c.Source, c.Date)
+				}
+
+				// 用 title + favicon 对比，验证哪个候选 IP 是源站
+				realIP := IsSourceIP(host, candidates)
+				if realIP != "" {
+					Cdnrealip = realIP
+					fmt.Println("[Origin IP]", realIP)
+					// 找到源站 IP 后，用真实 IP 继续扫描
+					ip = realIP
+				} else {
+					fmt.Println("[Origin IP] 未能验证源站 IP，仍使用 CDN 节点扫描")
+				}
+			} else {
+				fmt.Println("[VirusTotal] 无候选 IP（需设置 VT_API_KEY 环境变量）")
+			}
 		}
 
 		var Alive_ports []Portresult

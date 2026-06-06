@@ -68,9 +68,6 @@ func Scan_full_port(ip string, host string, grabbanner bool) []Portresult {
 	var jobs = make(chan int, 100)
 	var results = make(chan Portresult, 100)
 	var wg sync.WaitGroup
-	// var ip string
-	// fmt.Println("请输入你要探测的ip：")
-	// fmt.Scan(&ip)
 
 	//协程开始发任务给jobs
 	go func() {

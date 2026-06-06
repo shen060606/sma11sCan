@@ -265,6 +265,8 @@ func Matchfinger(res HTTPResult) []string {
 			target = res.Cookies
 		case "title":
 			target = res.Title
+		case "meta":
+			target = res.Body
 			// case "favicon":
 			// 	target = res.FaviconHash
 		}
