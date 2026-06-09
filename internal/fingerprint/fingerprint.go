@@ -1,4 +1,4 @@
-package main
+package fingerprint
 
 import (
 	"crypto/md5"
@@ -20,7 +20,7 @@ type FingerRule struct {
 	Weight   int
 }
 
-var FingerDB = []FingerRule{
+var fingerDB = []FingerRule{
 
 	// =========================
 	// Web Server  (铁证级，一条命中就过)
@@ -152,7 +152,7 @@ var FingerDB = []FingerRule{
 	{Product: "Cacti", Location: "title", Keyword: "cacti", Regex: false, Weight: 85},
 }
 
-var FaviconDB = map[string][]string{
+var faviconDB = map[string][]string{
 
 	// =========================
 	// DevOps / 运维平台
@@ -239,7 +239,7 @@ var FaviconDB = map[string][]string{
 	"de2b6edbf7930f5dd0ffe0528b2bbcf4": {"Barracuda Firewall"},
 }
 
-// 每个web页面的信息
+// HTTPResult 每个web页面的信息
 type HTTPResult struct {
 	Title       string
 	Headers     string
@@ -252,7 +252,7 @@ func Matchfinger(res HTTPResult) []string {
 
 	result := make(map[string]int)
 
-	for _, rule := range FingerDB {
+	for _, rule := range fingerDB {
 		var target string
 
 		switch rule.Location {
@@ -267,8 +267,6 @@ func Matchfinger(res HTTPResult) []string {
 			target = res.Title
 		case "meta":
 			target = res.Body
-			// case "favicon":
-			// 	target = res.FaviconHash
 		}
 
 		target = strings.ToLower(target)
@@ -295,7 +293,7 @@ func Matchfinger(res HTTPResult) []string {
 	return lastresult
 }
 
-// 获取favicon，然后返回md5哈希值
+// GetFavicon 获取favicon，然后返回md5哈希值
 func GetFavicon(ip string, body string) []string {
 	Client := &http.Client{
 		Timeout: 3 * time.Second,
@@ -357,7 +355,7 @@ func MatchFavicon(hashes []string) []string {
 
 	for _, h := range hashes {
 
-		if products, ok := FaviconDB[h]; ok {
+		if products, ok := faviconDB[h]; ok {
 
 			for _, product := range products {
 
@@ -374,5 +372,4 @@ func MatchFavicon(hashes []string) []string {
 	}
 
 	return fps
-
 }

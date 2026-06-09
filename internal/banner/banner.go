@@ -1,4 +1,4 @@
-package main
+package banner
 
 import (
 	"context"
@@ -10,14 +10,16 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/shen060606/sma11sCan/internal/fingerprint"
 )
 
+// Bannerget TCP端口Banner抓取
 func Bannerget(ip string, port int) string {
 	addr := fmt.Sprintf("%s:%d", ip, port)
-	conn, err := net.DialTimeout("tcp", addr, 2*time.Second) //tcp链接建立成功后，等待信息的超时时间
+	conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 
 	if err != nil {
-		//fmt.Println(err)
 		return ""
 	}
 
@@ -26,15 +28,14 @@ func Bannerget(ip string, port int) string {
 
 	buf := make([]byte, 1024)
 
-	n, err := conn.Read(buf) //读取conn的内容并写进buf里面
+	n, err := conn.Read(buf)
 
 	if err != nil {
 		return ""
 	}
 
-	result := strings.TrimSpace(string(buf[:n])) //把切片的有效部分转化成字符串，并且去除空格部分
-	return BannerClean(result)
-
+	result := strings.TrimSpace(string(buf[:n]))
+	return bannerClean(result)
 }
 
 type HttpInfo struct {
@@ -46,19 +47,19 @@ type HttpInfo struct {
 	Fingerprints string
 }
 
-// 80,443,8080端口http请求
+// Httpbannerget 80,443,8080端口http请求
 func Httpbannerget(ip string, port int, host string) (*HttpInfo, error) {
 
-	info, err := Dorequest("https", ip, port, host)
+	info, err := dorequest("https", ip, port, host)
 	if err == nil {
 		return info, nil
 	}
 
-	return Dorequest("http", ip, port, host)
+	return dorequest("http", ip, port, host)
 }
 
 // ip: TCP 连接目标 IP；host: SNI + Host 头使用的域名（没域名时等于 ip）
-func Dorequest(scheme string, ip string, port int, host string) (*HttpInfo, error) {
+func dorequest(scheme string, ip string, port int, host string) (*HttpInfo, error) {
 	var headers strings.Builder
 
 	dialer := &net.Dialer{Timeout: 2 * time.Second}
@@ -101,7 +102,7 @@ func Dorequest(scheme string, ip string, port int, host string) (*HttpInfo, erro
 	for k, v := range conn.Header {
 		headers.WriteString(k)
 		headers.WriteString(": ")
-		headers.WriteString(strings.Join(v, ";")) //把一个数组（切片）里的多个值，用指定符号连起来
+		headers.WriteString(strings.Join(v, ";"))
 		headers.WriteString("\n")
 	}
 
@@ -116,29 +117,25 @@ func Dorequest(scheme string, ip string, port int, host string) (*HttpInfo, erro
 	}
 
 	var title string
-	//title = ""                                           //默认为空
-	body, _ := io.ReadAll(io.LimitReader(conn.Body, 1024*1024)) //提取body里面的title
-	re := regexp.MustCompile(`(?i)<title>(.*?)</title>`)        //(.*?)是捕获组
+	body, _ := io.ReadAll(io.LimitReader(conn.Body, 1024*1024))
+	re := regexp.MustCompile(`(?i)<title>(.*?)</title>`)
 	match := re.FindStringSubmatch(string(body))
 
 	if len(match) > 1 {
 		title = match[1]
 	}
 
-	//body, _ := io.ReadAll(conn.Body)  //返回body太多了，只要状态码和响应头
-	//return conn.Status + "| Server:" + conn.Header.Get("Server") + "| Title:" + title
-
-	httpresult1 := HTTPResult{
+	httpresult := fingerprint.HTTPResult{
 		Title:   title,
 		Headers: headers.String(),
 		Body:    string(body),
 		Cookies: cookies.String(),
 	}
 
-	favHashes := GetFavicon(reqURL, string(body))
+	favHashes := fingerprint.GetFavicon(reqURL, string(body))
 
-	fps1 := Matchfinger(httpresult1)
-	fps2 := MatchFavicon(favHashes)
+	fps1 := fingerprint.Matchfinger(httpresult)
+	fps2 := fingerprint.MatchFavicon(favHashes)
 
 	allfps := append(fps1, fps2...)
 
@@ -150,10 +147,9 @@ func Dorequest(scheme string, ip string, port int, host string) (*HttpInfo, erro
 		Server:       conn.Header.Get("Server"),
 		Fingerprints: strings.Join(allfps, ","),
 	}, nil
-
 }
 
-// 将info存在的部分转化为字符串，然后赋值给banner
+// Display 将info存在的部分转化为字符串
 func (h *HttpInfo) Display() string {
 	var parts []string
 
@@ -176,71 +172,7 @@ func (h *HttpInfo) Display() string {
 	return strings.Join(parts, " | ")
 }
 
-func BannerIdentify(port int, banner string) string {
-	// 第一层：Banner 关键词匹配（最准）
-	if banner != "" {
-		b := strings.ToLower(banner)
-
-		if strings.Contains(b, "ssh-2.0") || strings.Contains(b, "openssh") {
-			return "SSH"
-		}
-		if strings.Contains(b, "220 ") {
-			if strings.Contains(b, "esmtp") || strings.Contains(b, "postfix") || strings.Contains(b, "sendmail") {
-				return "SMTP"
-			}
-			if strings.Contains(b, "ftp") || strings.Contains(b, "proftpd") || strings.Contains(b, "vsftpd") {
-				return "FTP"
-			}
-			if strings.Contains(b, "vmware") {
-				return "VMware"
-			}
-			return "SMTP/FTP"
-		}
-		if strings.Contains(b, "caching_sha2") || strings.Contains(b, "mysql") {
-			return "MySQL"
-		}
-		if strings.Contains(b, "+ok") {
-			return "POP3"
-		}
-		if strings.Contains(b, "* ok") || strings.Contains(b, "imap4") {
-			return "IMAP"
-		}
-		if strings.Contains(b, "redis") || strings.Contains(b, "-err") {
-			return "Redis"
-		}
-		if strings.Contains(b, "mongodb") {
-			return "MongoDB"
-		}
-		if strings.Contains(b, "rdp") || strings.Contains(b, "tpkt") {
-			return "RDP"
-		}
-		if strings.Contains(b, "telnet") {
-			return "Telnet"
-		}
-		if strings.Contains(b, "dovecot") {
-			return "Dovecot"
-		}
-		if strings.Contains(b, "postgresql") || strings.Contains(b, "postgres") {
-			return "PostgreSQL"
-		}
-		if strings.Contains(b, "mssql") || strings.Contains(b, "sql server") {
-			return "MSSQL"
-		}
-		if strings.HasPrefix(b, "http/") || strings.Contains(b, "server:") {
-			return "HTTP"
-		}
-	}
-
-	// 第二层：端口表兜底
-	if svc := Top_port()[port]; svc != "" {
-		return svc
-	}
-
-	// 第三层：未知
-	return ""
-}
-
-func BannerClean(raw string) string {
+func bannerClean(raw string) string {
 	var b strings.Builder
 	for _, r := range raw {
 		if r >= 32 && r < 127 {

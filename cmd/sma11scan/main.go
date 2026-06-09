@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/shen060606/sma11sCan/internal/cdn"
+	"github.com/shen060606/sma11sCan/internal/scanner"
+	"github.com/shen060606/sma11sCan/internal/subdomain"
 )
 
 func main() {
@@ -15,8 +19,6 @@ func main() {
 	var noscan bool
 	var wordlist string
 
-	// fmt.Println("请输入你要探测的ip：")
-	//fmt.Scan(&ip)
 	flag.StringVar(&ip, "ip", "", "目标域名/ip/CIDR网段")
 	flag.StringVar(&module, "module", "fast", "扫描模式 (fast 或 top 或 full)")
 	flag.BoolVar(&grabbanner, "banner", false, "抓取banner服务")
@@ -28,13 +30,12 @@ func main() {
 
 	//子域名模式
 	if domain != "" {
-		//subdomains := GetSubdomains(domain)
-		words := ReadWordlist(wordlist)
+		words := subdomain.ReadWordlist(wordlist)
 		if len(words) == 0 {
 			fmt.Println("字典文件不存在")
 			return
 		}
-		subdomains := GetdomainsForce(domain, words)
+		subdomains := subdomain.GetdomainsForce(domain, words)
 		if len(subdomains) == 0 {
 			fmt.Println("没有子域名")
 			return
@@ -53,7 +54,7 @@ func main() {
 		//带其他参数时，每个 IP 记住对应的子域名
 		ipToHost := make(map[string]string)
 		for _, sub := range subdomains {
-			if ip := ResolveHost(sub); ip != "" {
+			if ip := scanner.ResolveHost(sub); ip != "" {
 				if _, exists := ipToHost[ip]; !exists {
 					ipToHost[ip] = sub
 				}
@@ -63,7 +64,7 @@ func main() {
 		fmt.Printf("\n解析到%d个IP地址，开始扫描...\n", len(ipToHost))
 
 		for ipstr, host := range ipToHost {
-			PrintResult(ipstr, Scan_fast_ports(ipstr, host, grabbanner))
+			scanner.PrintResult(ipstr, scanner.ScanFastPorts(ipstr, host, grabbanner))
 		}
 		return
 	}
@@ -73,11 +74,11 @@ func main() {
 		//为了ip和端口对应输出，设置一个结构体
 		type result struct {
 			ip    string
-			ports []Portresult
+			ports []scanner.Portresult
 		}
 		var results []result
 
-		ips := Cidrgetter(ip)
+		ips := scanner.Cidrgetter(ip)
 		if len(ips) == 0 {
 			return
 		}
@@ -88,7 +89,7 @@ func main() {
 			wg.Add(1)
 			go func(h string) {
 				defer wg.Done()
-				ports := Scan_fast_ports(h, h, grabbanner)
+				ports := scanner.ScanFastPorts(h, h, grabbanner)
 				mu.Lock()
 				results = append(results, result{h, ports})
 				mu.Unlock()
@@ -100,7 +101,7 @@ func main() {
 		var aliveCount int
 		for _, r := range results {
 			if len(r.ports) > 0 {
-				PrintResult(r.ip, r.ports)
+				scanner.PrintResult(r.ip, r.ports)
 				aliveCount++
 			}
 		}
@@ -110,20 +111,20 @@ func main() {
 
 	} else {
 		host := ip // 保存原始输入（域名或IP）
-		ip = ResolveHost(ip)
+		ip = scanner.ResolveHost(ip)
 		if ip == "" {
 			fmt.Println("无法解析目标域名!!!")
 			return
 		}
 
 		// 进行 CDN 检测，尝试找到源站 IP
-		cdninfo := DetectCdnByCNAME(host)
+		cdninfo := cdn.DetectCdnByCNAME(host)
 
 		if cdninfo.Iscdn {
 			fmt.Println("[CDN] true")
 			fmt.Println("[CDN Provider]", strings.Join(cdninfo.Providers, ","))
 
-			candidates := FindallHostip(host)
+			candidates := cdn.FindallHostip(host)
 			if len(candidates) > 0 {
 				fmt.Printf("[VirusTotal] 获取到 %d 个候选 IP\n", len(candidates))
 				for _, c := range candidates {
@@ -131,9 +132,9 @@ func main() {
 				}
 
 				// 用 title + favicon 对比，验证哪个候选 IP 是源站
-				realIP := IsSourceIP(host, candidates)
+				realIP := cdn.IsSourceIP(host, candidates)
 				if realIP != "" {
-					Cdnrealip = realIP
+					cdn.Cdnrealip = realIP
 					fmt.Println("[Origin IP]", realIP)
 					// 找到源站 IP 后，用真实 IP 继续扫描
 					ip = realIP
@@ -145,20 +146,20 @@ func main() {
 			}
 		}
 
-		var Alive_ports []Portresult
+		var Alive_ports []scanner.Portresult
 		switch module {
 		case "fast":
-			Alive_ports = Scan_fast_ports(ip, host, grabbanner)
+			Alive_ports = scanner.ScanFastPorts(ip, host, grabbanner)
 
 		case "full":
-			Alive_ports = Scan_full_port(ip, host, grabbanner)
+			Alive_ports = scanner.ScanFullPort(ip, host, grabbanner)
 
 		case "top":
-			Alive_ports = Scan_top_ports(ip, host, grabbanner)
+			Alive_ports = scanner.ScanTopPorts(ip, host, grabbanner)
 
 		default:
 			fmt.Println("无效的扫描模式")
 		}
-		PrintResult(ip, Alive_ports)
+		scanner.PrintResult(ip, Alive_ports)
 	}
 }

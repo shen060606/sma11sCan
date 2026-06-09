@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sma11sCan</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 920px;
+      margin: 40px auto;
+      padding: 0 16px 32px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--accent-strong);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    pre {
+      margin: 16px 0 0;
+      padding: 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      overflow: auto;
+      min-height: 120px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 720px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>sma11sCan</h1>
+      <p>输入目标后提交扫描请求，后端会根据 module 和 banner 参数执行操作。</p>
+
+      <form id="scanForm">
+        <div class="field">
+          <label for="target">Target</label>
+          <input id="target" name="target" type="text" placeholder="例如 192.168.1.1 或 example.com" required />
+        </div>
+
+        <div class="grid">
+          <div class="field">
+            <label for="module">Module</label>
+            <select id="module" name="module">
+              <option value="fast">fast</option>
+              <option value="top">top</option>
+              <option value="full">full</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="banner">Banner</label>
+            <label class="check">
+              <input id="banner" name="banner" type="checkbox" />
+              开启 banner 抓取
+            </label>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" type="submit">提交</button>
+          <span class="hint">接口默认请求 <code>/api/v1/scan</code></span>
+        </div>
+      </form>
+
+      <pre id="result">{ "result": "waiting" }</pre>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("scanForm");
+    const result = document.getElementById("result");
+    const submitBtn = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const target = document.getElementById("target").value.trim();
+      const module = document.getElementById("module").value;
+      const banner = document.getElementById("banner").checked;
+
+      if (!target) {
+        result.textContent = JSON.stringify({ error: "target is required" }, null, 2);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "提交中...";
+      result.textContent = "running...";
+
+      try {
+        const resp = await fetch("/api/v1/scan", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            ip: target,
+            module: module,
+            banner: banner
+          })
+        });
+
+        const text = await resp.text();
+        try {
+          const data = JSON.parse(text);
+          result.textContent = JSON.stringify(data, null, 2);
+        } catch {
+          result.textContent = text;
+        }
+      } catch (err) {
+        result.textContent = JSON.stringify({ error: String(err) }, null, 2);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "提交";
+      }
+    });
+  </script>
+</body>
+</html>
