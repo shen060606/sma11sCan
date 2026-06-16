@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>扫描历史 — sma11scan</title>
+  <style>
+    /* ========== reset & base ========== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f0f2f5;
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    /* ========== top nav ========== */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+    }
+
+    .topbar .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      color: #111827;
+    }
+
+    .topbar .logo span {
+      color: #2563eb;
+    }
+
+    .topbar .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, .3);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #4b5563;
+    }
+
+    .btn-ghost:hover {
+      background: #f3f4f6;
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+
+    .btn-outline {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      color: #374151;
+    }
+
+    .btn-outline:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+
+    /* ========== stats bar ========== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 24px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .stat-icon.blue {
+      background: #dbeafe;
+    }
+
+    .stat-icon.green {
+      background: #dcfce7;
+    }
+
+    .stat-icon.purple {
+      background: #f3e8ff;
+    }
+
+    .stat-icon.amber {
+      background: #fef3c7;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.2;
+    }
+
+    /* ========== main content ========== */
+    .main-wrap {
+      max-width: 1200px;
+      margin: 0 auto 48px;
+      padding: 0 24px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========== scan card ========== */
+    .scan-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: box-shadow .15s;
+    }
+
+    .scan-card:hover {
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .1s;
+      gap: 16px;
+    }
+
+    .card-header:hover {
+      background: #fafbfc;
+    }
+
+    .card-header .chevron {
+      width: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+      transition: transform .2s;
+    }
+
+    .card-header.open .chevron {
+      transform: rotate(90deg);
+    }
+
+    .card-meta {
+      display: flex;
+      gap: 28px;
+      flex: 1;
+      align-items: center;
+    }
+
+    .card-meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-meta-label {
+      font-size: 11px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .card-meta-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .card-meta-value.mono {
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-fast {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .badge-full {
+      background: #fce7f3;
+      color: #9d174d;
+    }
+
+    .badge-top {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .card-body {
+      display: none;
+      border-top: 1px solid #f0f0f0;
+      background: #fafbfc;
+      padding: 16px 20px;
+    }
+
+    .card-body.show {
+      display: block;
+    }
+
+    /* host block inside card */
+    .host-block {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .host-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .host-head {
+      padding: 10px 14px;
+      background: #f3f4f6;
+      font-weight: 600;
+      font-size: 13px;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .host-head .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: inline-block;
+    }
+
+    .port-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .port-table th {
+      background: #f9fafb;
+      color: #6b7280;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    .port-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+
+    .port-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .port-table pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 12px;
+      max-width: 400px;
+      max-height: 80px;
+      overflow: auto;
+    }
+
+    .port-num {
+      font-weight: 700;
+      color: #2563eb;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+    }
+
+    .no-ports {
+      color: #9ca3af;
+      font-style: italic;
+      padding: 12px;
+    }
+
+    /* ========== empty & loading ========== */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9ca3af;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .empty-title {
+      font-size: 18px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .empty-desc {
+      font-size: 14px;
+      color: #9ca3af;
+    }
+
+    .skeleton {
+      animation: shimmer 1.2s infinite;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      border-radius: 8px;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    .sk-row {
+      height: 60px;
+      margin-bottom: 12px;
+    }
+
+    /* ========== search ========== */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .search-input {
+      flex: 1;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .search-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .08);
+    }
+
+    .search-input::placeholder {
+      color: #c4c4c4;
+    }
+
+    /* ========== responsive ========== */
+    @media (max-width: 768px) {
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .card-meta {
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ──── 顶栏 ──── -->
+  <nav class="topbar">
+    <div class="logo">🔍 sma11<span>scan</span></div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" id="refreshBtn">🔄 刷新</button>
+      <a class="btn btn-primary btn-sm" href="/">📡 新建扫描</a>
+    </div>
+  </nav>
+
+  <!-- ──── 统计卡片 ──── -->
+  <section class="stats-row" id="statsRow">
+    <div class="stat-card">
+      <div class="stat-icon blue">📋</div>
+      <div>
+        <div class="stat-label">扫描批次</div>
+        <div class="stat-value" id="statBatches">-</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">🖥</div>
+      <div>
+        <div class="stat-label">扫描主机</div>
+        <div class="stat-value" id="statHosts">-</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">🔌</div>
+      <div>
+        <div class="stat-label">存活端口</div>
+        <div class="stat-value" id="statPorts">-</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">📅</div>
+      <div>
+        <div class="stat-label">最近扫描</div>
+        <div class="stat-value" id="statLatest" style="font-size:15px;">-</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──── 主体 ──── -->
+  <main class="main-wrap">
+    <div class="search-bar">
+      <input class="search-input" id="searchInput" placeholder="🔎 搜索目标 IP / 域名..." />
+      <button class="btn btn-outline btn-sm" id="clearSearch">清除</button>
+    </div>
+
+    <div id="cardList"><!-- scan cards --></div>
+  </main>
+
+  <script>
+    const cardList = document.getElementById("cardList");
+    const searchInput = document.getElementById("searchInput");
+    let allGroups = [];
+
+    function esc(v) {
+      return String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const now = new Date();
+      const diff = Math.floor((now - d) / 1000);
+      if (diff < 60) return "刚刚";
+      if (diff < 3600) return Math.floor(diff / 60) + " 分钟前";
+      if (diff < 86400) return Math.floor(diff / 3600) + " 小时前";
+      if (diff < 604800) return Math.floor(diff / 86400) + " 天前";
+      return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function fmtTime(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function moduleBadge(m) {
+      const map = { fast: "badge-fast", full: "badge-full", top: "badge-top" };
+      return `<span class="badge ${map[m] || "badge-fast"}">${esc(m)}</span>`;
+    }
+
+    // ── 分组 ──
+    function groupTasks(tasks) {
+      const groups = [];
+      let cur = null;
+      for (const t of tasks) {
+        if (!cur || cur.batch_id !== t.BatchID) {
+          cur = { batch_id: t.BatchID, target: t.Target, module: t.Module, created_at: t.CreatedAt, tasks: [] };
+          groups.push(cur);
+        }
+        cur.tasks.push(t);
+      }
+      return groups;
+    }
+
+    // ── 统计 ──
+    function updateStats(groups) {
+      document.getElementById("statBatches").textContent = groups.length;
+      let hosts = 0, ports = 0, latest = "-";
+      for (const g of groups) {
+        hosts += g.tasks.length;
+        for (const t of g.tasks) ports += (t.Results || []).length;
+        if (latest === "-" && g.created_at) latest = timeAgo(g.created_at);
+      }
+      document.getElementById("statHosts").textContent = hosts;
+      document.getElementById("statPorts").textContent = ports;
+      document.getElementById("statLatest").textContent = latest;
+    }
+
+    // ── 渲染卡片 ──
+    function render(groups) {
+      updateStats(groups);
+
+      if (!groups.length) {
+        cardList.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📭</div>
+            <div class="empty-title">暂无扫描记录</div>
+            <div class="empty-desc">去 <a href="/">新建扫描</a> 发起第一次扫描吧</div>
+          </div>`;
+        return;
+      }
+
+      cardList.innerHTML = groups.map((g, i) => {
+        const hostCount = g.tasks.length;
+        const portCount = g.tasks.reduce((n, t) => n + (t.Results || []).length, 0);
+        const ips = g.tasks.map(t => t.IP).filter(Boolean);
+
+        return `
+        <div class="scan-card">
+          <div class="card-header" data-idx="${i}">
+            <span class="chevron">▶</span>
+            <div class="card-meta">
+              <div class="card-meta-item">
+                <span class="card-meta-label">批次</span>
+                <span class="card-meta-value mono">#${esc(g.batch_id)}</span>
+              </div>
+              <div class="card-meta-item">
+                <span class="card-meta-label">目标</span>
+                <span class="card-meta-value mono">${esc(g.target)}</span>
+              </div>
+              <div class="card-meta-item">
+                <span class="card-meta-label">模式</span>
+                <span class="card-meta-value">${moduleBadge(g.module)}</span>
+              </div>
+              <div class="card-meta-item">
+                <span class="card-meta-label">主机</span>
+                <span class="card-meta-value">${hostCount} 台</span>
+              </div>
+              <div class="card-meta-item">
+                <span class="card-meta-label">端口</span>
+                <span class="card-meta-value">${portCount} 个</span>
+              </div>
+              <div class="card-meta-item">
+                <span class="card-meta-label">时间</span>
+                <span class="card-meta-value" title="${esc(fmtTime(g.created_at))}">${esc(timeAgo(g.created_at))}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body" id="body-${i}">
+            ${g.tasks.map(t => `
+              <div class="host-block">
+                <div class="host-head">
+                  <span class="dot"></span>${esc(t.IP)}
+                </div>
+                ${(t.Results || []).length ? `
+                <table class="port-table">
+                  <thead><tr><th>端口</th><th>服务</th><th>指纹</th><th>Banner</th></tr></thead>
+                  <tbody>
+                    ${(t.Results || []).map(p => `
+                      <tr>
+                        <td><span class="port-num">${esc(p.Port)}</span></td>
+                        <td>${p.Server ? esc(p.Server) : "<span style='color:#d1d5db'>—</span>"}</td>
+                        <td>${p.Fingerprints ? esc(p.Fingerprints) : "<span style='color:#d1d5db'>—</span>"}</td>
+                        <td>${p.Banner ? `<pre>${esc(p.Banner)}</pre>` : "<span style='color:#d1d5db'>—</span>"}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>` : `<div class="no-ports">该主机无存活端口</div>`}
+              </div>
+            `).join("")}
+          </div>
+        </div>`;
+      }).join("");
+
+      // ── 点击展开/折叠 ──
+      document.querySelectorAll(".card-header").forEach(header => {
+        header.addEventListener("click", () => {
+          const idx = header.dataset.idx;
+          const body = document.getElementById("body-" + idx);
+          const isOpen = body.classList.contains("show");
+          body.classList.toggle("show", !isOpen);
+          header.classList.toggle("open", !isOpen);
+        });
+      });
+    }
+
+    // ── 搜索过滤 ──
+    function filter() {
+      const kw = searchInput.value.trim().toLowerCase();
+      if (!kw) { render(allGroups); return; }
+      const filtered = allGroups.filter(g => {
+        if (esc(g.target).toLowerCase().includes(kw)) return true;
+        if (String(g.batch_id).includes(kw)) return true;
+        return g.tasks.some(t => (t.IP || "").toLowerCase().includes(kw));
+      });
+      render(filtered);
+    }
+
+    // ── 加载 ──
+    async function load() {
+      cardList.innerHTML = `<div class="skeleton sk-row"></div><div class="skeleton sk-row"></div><div class="skeleton sk-row"></div>`;
+      try {
+        const resp = await fetch("/api/v1/scans/list");
+        const tasks = await resp.json();
+        if (!resp.ok) throw new Error(tasks.error || "请求失败");
+        allGroups = groupTasks(tasks);
+        filter(); // 走 filter，如果搜索框有值就过滤
+      } catch (err) {
+        cardList.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">加载失败</div><div class="empty-desc">${esc(err.message)}</div></div>`;
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", load);
+    searchInput.addEventListener("input", filter);
+    document.getElementById("clearSearch").addEventListener("click", () => {
+      searchInput.value = "";
+      filter();
+    });
+    load();
+  </script>
+</body>
+
+</html>

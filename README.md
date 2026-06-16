@@ -1,6 +1,6 @@
 # sma11sCan
 
-基于 Go 开发的高并发端口扫描 + 资产探测工具，支持端口扫描、Banner 抓取、HTTP 探测、Web 指纹识别、Favicon 识别、服务识别、子域名收集、**CDN 检测**和**源站 IP 找回**。
+基于 Go 开发的高并发端口扫描 + 资产探测工具，支持端口扫描、Banner 抓取、HTTP 探测、Web 指纹识别、Favicon 识别、服务识别、子域名收集、**CDN 检测**和**源站 IP 找回**。同时提供 **Gin Web API 服务**，支持 Web 页面发起扫描和历史查询。
 
 ## 功能清单
 
@@ -29,12 +29,37 @@
 - **crt.sh 证书日志**（备选）：通过证书透明度日志获取子域名
 - 子域名收集后可联动端口扫描
 
+### Web API 服务（新增）
+- **Gin Web 框架**：提供 RESTful API + 前端页面
+- **网页发起扫描**：浏览器直接输入 IP/域名/CIDR，选择扫描模式
+- **扫描历史查询**：SQLite 存储扫描结果，支持按批次查看历史记录
+- 监听端口：`8088`
+
 ## 快速开始
+
+### 下载 Release 二进制（推荐）
+
+从 [Releases](https://github.com/shen060606/sma11sCan/releases) 页面下载对应的 `.exe` 文件，直接运行：
+
+```bash
+# CLI 命令行工具
+.\sma11scan.exe -ip 192.168.1.1 -module fast
+
+# Web API 服务（双击运行，浏览器访问 http://localhost:8088）
+.\sma11scan-api.exe
+```
+
+### 从源码运行
 
 ```bash
 git clone https://github.com/shen060606/sma11sCan.git
 cd sma11sCan
-go run ./cmd/sma11scan//cmd/sma11scan/ -h
+
+# CLI 工具
+go run ./cmd/sma11scan/ -h
+
+# API 服务
+go run ./cmd/sma11scan-api/
 ```
 
 ### 环境变量（可选）
@@ -53,6 +78,22 @@ export VT_API_KEY="your-api-key"
 
 不设置不影响其他功能，仅 CDN 源站找回需要。
 
+### Docker（可选，仅供轻度体验）
+
+```bash
+# 构建镜像
+docker build -t sma11scan-api .
+
+# 启动
+docker run -d -p 8088:8088 --name scan-api sma11scan-api
+
+# 浏览器访问 http://localhost:8088
+```
+
+**Docker 限制说明**：由于 Docker Desktop（Windows/macOS）底层经过多层 NAT 转发，桥接网络下并发连接数受限，仅支持 **fast 模式扫描单个 IP/域名**。`top` 和 `full` 模式、CIDR 网段扫描、回环地址扫描在 Docker 中无法正常工作。如需完整扫描能力，请直接下载 Release 二进制在原生系统上运行。
+
+> Linux 服务器上使用 `docker run --network host` 可解除上述限制。
+
 ## 命令行参数
 
 | 参数        | 默认值           | 说明                                                          |
@@ -70,19 +111,19 @@ export VT_API_KEY="your-api-key"
 
 ```bash
 # Fast 模式（常用端口）
-go run ./cmd/sma11scan//cmd/sma11scan/ -ip 192.168.1.1 -module fast
+.\sma11scan.exe -ip 192.168.1.1 -module fast
 
 # Top 1000 端口 + Banner + 指纹识别
-go run ./cmd/sma11scan/ -ip 192.168.1.1 -module top -banner
+.\sma11scan.exe -ip 192.168.1.1 -module top -banner
 
 # 全端口扫描（1-65535）
-go run ./cmd/sma11scan/ -ip 192.168.1.1 -module full
+.\sma11scan.exe -ip 192.168.1.1 -module full
 
 # 域名扫描（自动 CDN 检测 + 源站 IP 找回）
-go run ./cmd/sma11scan/ -ip www.baidu.com -module fast -banner
+.\sma11scan.exe -ip www.baidu.com -module fast -banner
 
 # CIDR 网段扫描
-go run ./cmd/sma11scan/ -ip 192.168.1.0/24 -banner
+.\sma11scan.exe -ip 192.168.1.0/24 -banner
 ```
 
 ### CDN 检测 & 源站 IP 找回
@@ -92,7 +133,7 @@ go run ./cmd/sma11scan/ -ip 192.168.1.0/24 -banner
 export VT_API_KEY="your-api-key"
 
 # 扫描域名，自动检测 CDN 并尝试找回源站 IP
-go run ./cmd/sma11scan/ -ip www.example.com -module top -banner
+.\sma11scan.exe -ip www.example.com -module top -banner
 ```
 
 输出示例：
@@ -116,13 +157,42 @@ go run ./cmd/sma11scan/ -ip www.example.com -module top -banner
 
 ```bash
 # 字典爆破子域名
-go run ./cmd/sma11scan/ -domain baidu.com
+.\sma11scan.exe -domain baidu.com
 
 # 只收集子域名，不扫描端口
-go run ./cmd/sma11scan/ -domain baidu.com -noscan
+.\sma11scan.exe -domain baidu.com -noscan
 
 # 子域名 + 端口扫描 + 指纹
-go run ./cmd/sma11scan/ -domain baidu.com -module top -banner
+.\sma11scan.exe -domain baidu.com -module top -banner
+```
+
+### Web API 服务
+
+```bash
+# 启动服务（双击 exe 或命令行运行均可）
+.\sma11scan-api.exe
+```
+
+浏览器打开 `http://localhost:8088`：
+- 首页：输入 IP/域名/CIDR，选择扫描模式，发起扫描
+- 查询页：`/api/v1/scans` 查看历史扫描记录
+
+API 接口：
+
+| 方法 | 路径               | 说明                     |
+| ---- | ------------------ | ------------------------ |
+| GET  | `/`                | 首页（扫描表单）         |
+| POST | `/api/v1/scan`     | 发起扫描                 |
+| GET  | `/api/v1/scans`    | 历史查询页面             |
+| GET  | `/api/v1/scans/list` | 扫描历史列表（JSON）   |
+
+POST `/api/v1/scan` 请求示例：
+```json
+{
+    "ip": "192.168.1.1",
+    "module": "fast",
+    "banner": false
+}
 ```
 
 ### 输出示例
@@ -136,24 +206,50 @@ go run ./cmd/sma11scan/ -domain baidu.com -module top -banner
 192.168.31.202:3306 [MySQL  ] 8.0.43 caching_sha2_password
 ```
 
+## 构建 Release
+
+```bash
+# Windows
+CGO_ENABLED=1 go build -ldflags="-s -w" -o sma11scan.exe ./cmd/sma11scan/
+CGO_ENABLED=1 go build -ldflags="-s -w" -o sma11scan-api.exe ./cmd/sma11scan-api/
+
+# Linux
+CGO_ENABLED=1 go build -ldflags="-s -w" -o sma11scan ./cmd/sma11scan/
+CGO_ENABLED=1 go build -ldflags="-s -w" -o sma11scan-api ./cmd/sma11scan-api/
+```
+
+> 注意：`CGO_ENABLED=1` 是必须的，因为项目依赖 SQLite（mattn/go-sqlite3）需要 CGO。
+
 ## 项目结构
 
 ```
 ├── cmd/
-│   └── sma11scan/
-│       └── main.go                    # 入口，CLI 参数解析与流程控制
+│   ├── sma11scan/
+│   │   └── main.go                    # CLI 入口，参数解析与流程控制
+│   └── sma11scan-api/
+│       └── main.go                    # API 入口，Gin Web 服务
+├── global/
+│   ├── db.go                          # SQLite 数据库初始化（GORM）
+│   ├── model.go                       # 数据模型定义
+│   ├── saveresult_gorm.go             # 扫描结果持久化
+│   ├── query.go                       # 历史查询逻辑
+│   └── redis.go                       # Redis 客户端（预留）
 ├── internal/
 │   ├── scanner/
 │   │   ├── scanner.go                 # 扫描核心（端口探测、Worker Pool、CIDR 解析、域名解析、结果输出）
-│   │   └── scan_model.go              # 端口列表 + 三种扫描模式 + 服务识别（BannerIdentify）
+│   │   └── scan_model.go              # 端口列表 + 三种扫描模式 + 服务识别
 │   ├── banner/
 │   │   └── banner.go                  # Banner 抓取、HTTP/HTTPS 探测（SNI 修复）、Banner 清洗
 │   ├── cdn/
-│   │   └── cdn.go                     # CDN 检测（CNAME 匹配 18 家 CDN）、源站 IP 找回（VirusTotal + Title/Favicon 验证）
+│   │   └── cdn.go                     # CDN 检测（CNAME 匹配 18 家 CDN）、源站 IP 找回
 │   ├── fingerprint/
 │   │   └── fingerprint.go             # Web 指纹库（100+ 规则 + Favicon）+ 权重匹配引擎
 │   └── subdomain/
 │       └── subdomain.go               # 子域名收集（crt.sh + DNS 字典爆破）
+├── static/
+│   ├── index.html                     # 扫描表单页面
+│   └── query.html                     # 历史查询页面
+├── Dockerfile                         # Docker 多阶段构建
 ├── go.mod
 ├── subdomains.txt                     # 默认子域名爆破字典
 └── README.md
@@ -161,7 +257,9 @@ go run ./cmd/sma11scan/ -domain baidu.com -module top -banner
 
 ## 技术实现
 
-- **并发控制**：全端口使用 Worker Pool + Channel，100 Worker 并行；子域名使用信号量限制 50 并发
+- **Web 框架**：Gin，提供 RESTful API 和静态页面服务
+- **数据库**：SQLite + GORM，存储扫描任务和历史结果
+- **并发控制**：全端口使用 Worker Pool + Channel，100 Worker 并行；子域名使用信号量限制 50 并发；CIDR 扫描独立 goroutine
 - **CDN 检测**：`DetectCdnByCNAME` 通过 `net.LookupCNAME` 获取域名 CNAME 记录，与 18 家 CDN 特征关键词匹配
 - **源站 IP 找回**：`GethostipbyThird` 调 VirusTotal API 获取历史解析 IP → `IsSourceIP` 对候选 IP 发起带 Host 头 + TLS SNI 的 HTTP/HTTPS 请求 → 比较 Title + Favicon MD5 双重验证
 - **Banner 抓取**：TCP 连接后 `conn.Read` 读取初始 Banner，`bannerClean` 清洗二进制数据

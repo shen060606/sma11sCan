@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -147,10 +148,16 @@
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="panel">
-      <h1>sma11sCan</h1>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h1 style="margin:0;">sma11sCan</h1>
+        <a href="/api/v1/scans"
+          style="border:0;border-radius:8px;padding:8px 16px;background:#f3f4f6;color:#374151;text-decoration:none;font-size:14px;font-weight:500;">📋
+          历史记录</a>
+      </div>
       <p>输入目标后提交扫描请求，后端会根据 module 和 banner 参数执行操作。</p>
 
       <form id="scanForm">
@@ -238,4 +245,5 @@
     });
   </script>
 </body>
+
 </html>

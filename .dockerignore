@@ -1,0 +1,6 @@
+*.exe
+*.exe~
+.git/
+.gocache/
+*.db
+README.md

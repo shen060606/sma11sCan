@@ -20,7 +20,7 @@ type Portresult struct {
 
 func IsportAlive(ip string, port int) bool {
 	ip_port := fmt.Sprintf("%s:%d", ip, port)
-	conn, err := net.DialTimeout("tcp", ip_port, 200*time.Millisecond)
+	conn, err := net.DialTimeout("tcp", ip_port, 500*time.Millisecond)
 
 	if err != nil {
 		return false
