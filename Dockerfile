@@ -3,8 +3,10 @@ FROM golang:alpine AS builder
 # 安装 C 编译器（SQLite CGO 需要）
 ENV CGO_ENABLED=1
 ENV GOPROXY=https://goproxy.cn,direct
+
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
     && apk add --no-cache gcc musl-dev
+    #SQLite 驱动依赖 CGO，必须装 gcc
 
 WORKDIR /build
 
