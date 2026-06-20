@@ -1,4 +1,7 @@
+# 编译二进制程序
 *.exe
+*.exe~
+bin/
+
+# Go缓存、模块缓存
 .gocache/
-*.db
-data/*.db
