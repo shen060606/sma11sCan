@@ -1,6 +1,23 @@
+# 编译二进制程序
 *.exe
 *.exe~
-.git/
-.gocache/
+bin/
+
+# SQLite数据库运行数据
 *.db
-README.md
+data/*.db
+
+# 日志、临时文件
+*.log
+*.tmp
+*.bak
+
+# IDE编辑器配置（镜像里完全不需要）
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 本地私有环境变量，不能打进镜像
+.env
+config.local.yaml
