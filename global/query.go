@@ -3,7 +3,7 @@ package global
 // GenerateBatchID 生成批次ID
 func GenerateBatchID() int {
 	var maxID int
-	row := DB.Model(&ScanTask{}).Select("batch_id").Where("batch_id != '' AND batch_id IS NOT NULL").Order("batch_id desc").Limit(1).Row()
+	row := DB.Model(&ScanTask{}).Select("batch_id").Where("batch_id IS NOT NULL").Order("batch_id desc").Limit(1).Row()
 
 	if err := row.Scan(&maxID); err != nil {
 		return 1
