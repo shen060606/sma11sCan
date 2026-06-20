@@ -1,2 +1,4 @@
 *.exe
 .gocache/
+*.db
+data/*.db
