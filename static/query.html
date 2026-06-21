@@ -671,8 +671,9 @@
       cardList.innerHTML = `<div class="skeleton sk-row"></div><div class="skeleton sk-row"></div><div class="skeleton sk-row"></div>`;
       try {
         const resp = await fetch("/api/v1/scans/list");
-        const tasks = await resp.json();
-        if (!resp.ok) throw new Error(tasks.error || "请求失败");
+        const respData = await resp.json();
+        if (!resp.ok) throw new Error(respData.error || "请求失败");
+        const tasks = respData.data || [];
         allGroups = groupTasks(tasks);
         filter(); // 走 filter，如果搜索框有值就过滤
       } catch (err) {

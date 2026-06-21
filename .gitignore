@@ -5,3 +5,24 @@ bin/
 
 # Go缓存、模块缓存
 .gocache/
+go.work
+go.work.sum
+
+# SQLite数据库（解决你合并冲突的scan.db）
+*.db
+data/*.db
+
+# 日志、临时文件
+*.log
+*.tmp
+*.bak
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 本地环境配置
+.env
+config.local.yaml
