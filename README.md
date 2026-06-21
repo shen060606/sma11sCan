@@ -71,9 +71,9 @@ sma11scan-api
 # 浏览器访问 http://localhost:8088
 ```
 
-<!-- TODO: 截图占位 -->
-<!-- ![首页](./img/sma11scan-index.png) -->
-<!-- ![历史查询](./img/sma11scan-query.png) -->
+<img src="./img/sma11scan-index.png" width="600" alt="首页" />
+
+<img src="./img/sma11scan-query.png" width="600" alt="历史查询" />
 
 ### 接口
 
