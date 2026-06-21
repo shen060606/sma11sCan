@@ -17,8 +17,8 @@ import (
 func main() {
 	// 初始化数据库
 	if err := global.InitDB(); err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Failed to initialize database: %v", err)
+
 	}
 
 	r := api.Setup()
@@ -32,7 +32,7 @@ func main() {
 	go func() {
 		fmt.Println("Server started on :8088")
 		if err := srv.ListenAndServe(); err != nil {
-			log.Fatal("Server error: %v", err)
+			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
@@ -47,7 +47,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:%v,err")
+		log.Fatalf("Server forced to shutdown:%v,err")
 	}
 
 	//关闭数据库
