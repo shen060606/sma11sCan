@@ -72,8 +72,8 @@ sma11scan-api
 ```
 
 <!-- TODO: 截图占位 -->
-<!-- ![首页](./img/index.png) -->
-<!-- ![历史查询](./img/query.png) -->
+<!-- ![首页](./img/sma11scan-index.png) -->
+<!-- ![历史查询](./img/sma11scan-query.png) -->
 
 ### 接口
 
