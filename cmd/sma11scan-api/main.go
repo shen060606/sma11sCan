@@ -25,12 +25,12 @@ func main() {
 
 	//下面的类似于r.run()
 	srv := &http.Server{
-		Addr:    ":8088",
+		Addr:    ":8089",
 		Handler: r,
 	}
 
 	go func() {
-		fmt.Println("Server started on :8088")
+		fmt.Println("Server started on :8089")
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}

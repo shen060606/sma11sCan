@@ -68,7 +68,7 @@ sma11scan -domain baidu.com -module top -banner
 # 启动
 sma11scan-api
 
-# 浏览器访问 http://localhost:8088
+# 浏览器访问 http://localhost:8089
 ```
 
 <img src="./img/sma11scan-index.png" width="600" alt="首页" />
@@ -102,12 +102,12 @@ POST `/api/v1/scan` 请求体：
 
 ```bash
 # 方式 1：直接运行
-sma11scan-api                    # 启动 API，监听 :8088
-nginx                            # 启动 Nginx 反向代理（80 → 8088）
+sma11scan-api                    # 启动 API，监听 :8089
+nginx                            # 启动 Nginx 反向代理（80 → 8089）
 
 # 方式 2：Docker
 docker build -t sma11scan-api .
-docker run -d -p 8088:8088 --name scan-api sma11scan-api
+docker run -d -p 8089:8089 --name scan-api sma11scan-api
 ```
 
 > Windows/macOS 上 Docker 受 NAT 限制，仅支持 fast 单 IP 扫描。完整功能请直接运行二进制。

@@ -41,6 +41,6 @@ COPY --from=builder /build/subdomains.txt /app/subdomains.txt
 # 数据库持久化目录
 VOLUME ["/app/data"]
 
-EXPOSE 8088
+EXPOSE 8089
 
 ENTRYPOINT ["./sma11scan-api"]
